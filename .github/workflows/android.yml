@@ -1,4 +1,4 @@
-name: Daneshyar 1.2 - Build and test APK
+name: Daneshyar 1.2.2 - Build and test APK
 on:
   workflow_dispatch:
     inputs:
@@ -16,7 +16,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Extract project
-        run: unzip -oq Daneshyar-v1.2-Project.zip
+        run: |
+          test -f Daneshyar-v1.2.2-Project.zip
+          rm -rf UniversityAssistant
+          unzip -oq Daneshyar-v1.2.2-Project.zip
+          cd UniversityAssistant
+          python3 verify-version.py source
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -58,8 +63,10 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Daneshyar-APK-${{ inputs.variant }}
-          path: UniversityAssistant/dist/*.apk
+          name: Daneshyar-APK-v1.2.2-${{ inputs.variant }}-run-${{ github.run_number }}
+          path: |
+            UniversityAssistant/dist/*.apk
+            UniversityAssistant/dist/build-info.json
           if-no-files-found: warn
       - name: Enable emulator acceleration
         run: |
@@ -81,11 +88,12 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Daneshyar-Test-Reports
+          name: Daneshyar-Reports-v1.2.2-run-${{ github.run_number }}
           path: |
             UniversityAssistant/app/build/reports/androidTests/
             UniversityAssistant/app/build/outputs/androidTest-results/
             UniversityAssistant/emulator.log
+            UniversityAssistant/dist/build-info.json
           if-no-files-found: warn
       - name: Remove temporary signing key
         if: always()
