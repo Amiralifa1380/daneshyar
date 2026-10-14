@@ -1,0 +1,56 @@
+   name: Build and test APK
+
+on: [workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract project
+        run: unzip -q Daneshyar-Android-Project.zip
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Install Android build tools
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+
+      - name: Build APK and run lint
+        working-directory: UniversityAssistant
+        run: bash build-apk.sh
+
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Test on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          script: cd UniversityAssistant && gradle --no-daemon :app:connectedDebugAndroidTest
+
+      - name: Upload installable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Daneshyar-APK
+          path: UniversityAssistant/dist/Daneshyar-1.0.apk
+          if-no-files-found: error
